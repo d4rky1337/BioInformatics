@@ -1,0 +1,15 @@
+from collections import Counter
+
+#first program
+S = "AVSKKDHA"
+result ="".join(set(S))
+print(result)
+
+#second program
+string_length = len(S)
+char_counts = Counter(S)
+
+print(f"Character frequencies in the string: '{S}'")
+for char, count in char_counts.items():
+    percentage = (count / string_length) * 100
+    print(f"'{char}' appears {count} time(s), which is {percentage:.2f}% of the string.")
