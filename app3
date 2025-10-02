@@ -1,0 +1,84 @@
+import tkinter as tk
+from tkinter import filedialog, scrolledtext, messagebox, ttk
+from collections import Counter
+
+# Generator function to read FASTA/FNA file one sequence at a time
+def fasta_reader(filepath):
+    header = None
+    seq_lines = []
+    try:
+        with open(filepath, "r") as file:
+            for line in file:
+                if line.startswith(">"):
+                    if header and seq_lines:
+                        yield header, "".join(seq_lines)
+                        seq_lines = []
+                    header = line.strip()
+                else:
+                    seq_lines.append(line.strip())
+            if header and seq_lines:
+                yield header, "".join(seq_lines)
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not read file: {e}")
+
+# Process sequences with streaming + progress bar
+def process_sequences():
+    file_path = filedialog.askopenfilename(
+        title="Select FASTA/FNA File",
+        filetypes=[("FASTA/FNA files", "*.fasta *.fa *.fna"), ("All files", "*.*")]
+    )
+
+    if not file_path:
+        return  # User canceled
+
+    result_text.delete(1.0, tk.END)
+
+    # Start progress bar in indeterminate mode
+    progress_bar.start(10)
+    root.update_idletasks()
+
+    try:
+        for idx, (header, sequence) in enumerate(fasta_reader(file_path), 1):
+            result_text.insert(tk.END, f"Sequence {idx}:\n")
+            result_text.insert(tk.END, f"Header Information:\n{header}\n")
+
+            # Unique characters
+            unique_chars = "".join(set(sequence))
+            result_text.insert(tk.END, f"Unique characters:\n{unique_chars}\n")
+
+            # Character frequencies
+            char_counts = Counter(sequence)
+            string_length = len(sequence)
+
+            result_text.insert(tk.END, f"Frequencies (length {string_length}):\n")
+            for char, count in char_counts.items():
+                percentage = (count / string_length) * 100
+                result_text.insert(tk.END, f"'{char}' appears {count} time(s), {percentage:.2f}% of sequence.\n")
+
+            result_text.insert(tk.END, "\n" + "-"*60 + "\n\n")
+            result_text.see(tk.END)  # Auto-scroll as sequences are processed
+            root.update_idletasks()  # Keep GUI responsive
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Processing failed: {e}")
+    finally:
+        progress_bar.stop()  # Stop progress bar
+
+# GUI Setup
+root = tk.Tk()
+root.title("FASTA/FNA Analyzer")
+root.geometry("700x550")
+
+# Button to choose FASTA/FNA file
+choose_button = tk.Button(root, text="Choose FASTA/FNA File", command=process_sequences)
+choose_button.pack(pady=10)
+
+# Progress bar
+progress_bar = ttk.Progressbar(root, orient="horizontal", mode="indeterminate", length=400)
+progress_bar.pack(pady=5)
+
+# Text area to display results
+result_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=80, height=25)
+result_text.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+root.mainloop()
